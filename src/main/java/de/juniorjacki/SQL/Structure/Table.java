@@ -16,11 +16,11 @@ public abstract class Table<E extends Enum<E> & DatabaseProperty,R extends Recor
     public List<Property> tableProperties() {
         List<Property> properties = new ArrayList<>();
         for (DatabaseProperty property : getProperties()) {
-            properties.add(new Property(property.name(), property.isKey(), property.getType()));
+            properties.add(new Property(property.name(), property.isKey(), property.isUnique(), property.getType()));
         }
         return properties;
     }
-    public record Property(String dbName,boolean key,Class<?> dataType) {};
+    public record Property(String dbName,boolean key,boolean unique,Class<?> dataType) {};
 }
 
 

@@ -44,20 +44,34 @@ public class ExampleTable extends Table<ExampleTable.Property,ExampleTable.Examp
         uID(true, UUID.class),
         preName(false,String.class),
         lastName(false,String.class),
-        email(false,String.class),
+        email(false,true,String.class),
         age(false,Integer.class),;
 
         private final boolean key;
+        private final boolean unique;
         private final Class<?> type;
+
 
         Property(boolean key, Class<?> type) {
             this.key = key;
+            unique = false;
+            this.type = type;
+        }
+
+        Property(boolean key,boolean unique, Class<?> type) {
+            this.key = key;
+            this.unique = unique;
             this.type = type;
         }
 
         @Override
         public boolean isKey() {
             return key;
+        }
+
+        @Override
+        public boolean isUnique() {
+            return unique;
         }
 
         @Override

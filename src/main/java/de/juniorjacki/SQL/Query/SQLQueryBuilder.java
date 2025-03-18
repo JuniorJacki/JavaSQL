@@ -1,9 +1,6 @@
 package de.juniorjacki.SQL.Query;
 
-
-
 import de.juniorjacki.SQL.Structure.Table;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +18,9 @@ public class SQLQueryBuilder {
             query.append(property.dbName())
                     .append(" ")
                     .append(getSQLType(property.dataType()));
-
+            if (property.unique() && !property.key()) {
+                query.append(" UNIQUE");
+            }
             if (property.key()) {
                 primaryKeys.add(property.dbName());
             }
