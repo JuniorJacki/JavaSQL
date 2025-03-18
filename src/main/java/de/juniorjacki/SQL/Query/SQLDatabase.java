@@ -11,6 +11,11 @@ import java.sql.ResultSet;
 
 public interface SQLDatabase {
 
+    /**
+     * Creates Tables that are Referred in the @Tables.Class if not Exist
+     * @param con
+     * @return
+     */
     default boolean buildDatabaseTables(Connection con) {
         try {
             for (Tables table : Tables.values()) {
@@ -30,6 +35,12 @@ public interface SQLDatabase {
 
     }
 
+    /**
+     * Checks if a Table is Empty
+     * @param conn Current Database Connection
+     * @param tableName Table name to check if empty
+     * @return If is Empty True, if not are an Error occurred False
+     */
     private static boolean isTableEmpty(Connection conn, String tableName) {
         try (PreparedStatement prepStatement = conn.prepareStatement("SELECT COUNT(*) FROM " + tableName);
              ResultSet rs = prepStatement.executeQuery()) {

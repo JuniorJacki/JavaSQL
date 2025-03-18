@@ -16,9 +16,7 @@ public class SQLConnection {
     private static Future<?> connectionTask;
 
     public record dbKey(String host, int port, String dataBase, String username, String passwd) {
-    }
-
-    ;
+    };
 
     protected boolean testKey(dbKey dbKey) throws SQLException {
         return DriverManager.getConnection("jdbc:mysql://" + dbKey.host + "/" + dbKey.dataBase, dbKey.username, dbKey.passwd).isValid(5000);
@@ -54,7 +52,7 @@ public class SQLConnection {
                         }
                     }
                 } catch (SQLException e) {
-                    System.out.println("Failed to reconnect to the database: " + e.getMessage());
+                    System.out.println("Failed to reconnect to the Database: " + e.getMessage());
                 }
                 try {
                     Thread.sleep(2000);

@@ -6,6 +6,7 @@ import java.util.List;
 
 public class SQLQueryBuilder {
 
+
     public static String generateCreateTableQuery(String tableName, List<Table.Property> properties) {
         StringBuilder query = new StringBuilder("CREATE TABLE IF NOT EXISTS ");
         query.append(tableName);
