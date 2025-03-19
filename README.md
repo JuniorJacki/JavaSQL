@@ -1,17 +1,49 @@
-# JavaSQL
-# A Highly Customizable SQL Service
+# JavaSQL - A Lightweight, Highly Customizable SQL Service
 
-## JavaSQL Creates and maintains SQL Tables and makes it easy to use Data from the Database in Code.
+## Key Features
 
-### Built in Methods to manipulate and read Data from a Database Table:
-- Integer: countByValue(keyColumn,keyValue)
-  - Counts Rows with specified keyValue in keyColumn
-- Boolean: existsByValue(keyColumn,keyValue)
-  - Checks if min. one row with keyValue in keyColumn exists
-- Optional<List<TableRow>>: getByValue(keyColumn,keyValue)
-- Optional<TableRow>: getFirstByValue(keyColumn,keyValue)
-- Optional<ColumnValue>: getFirstColumnByValue(keyColumn,keyValue,returnColumn)
-- Optional<TableRow>: getByOrder(keyColumn,sortOrder)
-- Optional<List<ColumnValue>>: getColumnByValue(keyColumn,keyValue,returnColumn)
-- Optional<ColumnValue>: getColumnByOrder(keyColumn,returnColumn,sortOrder)
-- ...
+- **Connection Management**
+  - Automatically reconnects if connection is lost
+  - Handles data usage during connection interruptions
+
+- **Automatic Table Creation**
+  - Creates tables based on definition in a Java Class
+    
+- **Easy Data Handling**
+  - Automatic datatype conversion between database and Java
+  - Rows as records
+  - Columns in their Java datatypes
+
+- **SQL Injection Protection**
+  - Filters all input passed to built-in database methods
+
+## Default Database Methods
+### (src/Interface/DatabaseInterface.java)
+
+### Query Methods
+- `Integer countByValue(keyColumn, keyValue)`
+  - Counts entries with a specific value
+- `Boolean existsByValue(keyColumn, keyValue)`
+  - Checks if a value exists
+- `Optional<List<Row>> getByValue(keyColumn, keyValue)`
+  - Retrieves all matching rows
+- `Optional<Row> getFirstByValue(keyColumn, keyValue)`
+  - Retrieves the first matching row
+- `Optional<ColumnValue> getFirstColumnByValue(keyColumn, keyValue, returnColumn)`
+  - Retrieves the first column value
+- `Optional<Row> getByOrder(keyColumn, sortOrder)`
+  - Retrieves a row based on sorting
+- `Optional<List<ColumnValue>> getColumnByValue(keyColumn, keyValue, returnColumn)`
+  - Retrieves column values
+- `Optional<ColumnValue> getColumnByOrder(keyColumn, returnColumn, sortOrder)`
+  - Retrieves a column value based on sorting
+
+### Modification Methods
+- `Boolean update(keyColumn, keyValue, updateColumn, updateValue)`
+  - Updates a specific value
+- `Boolean update(Row)`
+  - Updates an entire row
+- `Boolean updateByOrder(keyColumn, sortOrder, updateColumn, updateValue)`
+  - Updates based on sorting
+- `Boolean upsert(Row)`
+  - Inserts a row
