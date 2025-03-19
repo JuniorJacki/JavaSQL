@@ -18,7 +18,7 @@
   - Filters all input passed to built-in database methods
 
 ## Default Database Methods
-### (src/Interface/DatabaseInterface.java)
+### ([src/main/SQL/Interface/DatabaseInterface.java](https://github.com/JuniorJacki/JavaSQL/blob/main/src/main/java/de/juniorjacki/SQL/Interface/DatabaseInterface.java))
 
 ### Query Methods
 - `Integer countByValue(keyColumn, keyValue)`
