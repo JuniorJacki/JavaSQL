@@ -12,7 +12,7 @@
 - **Easy Data Handling**
   - Automatic datatype conversion between database and Java
   - Rows as records
-  - Columns in their Java datatypes
+  - Columns as their Java datatypes
 
 - **SQL Injection Protection**
   - Filters all input passed to built-in database methods
