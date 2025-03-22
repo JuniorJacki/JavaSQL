@@ -35,6 +35,9 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
         }
     }
 
+    record ColumnValue<E>(E keyColumn, Object keyValue) {}
+
+
 
     private void throwDBError(Exception e){
         System.out.println("Database Error: "+e);
@@ -91,6 +94,50 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
 
             try (PreparedStatement prepStatement = SQL.getConnection().get().prepareStatement("SELECT 1 FROM " + getInstance().tableName() + " WHERE " + keyColumn.name() + " = ? LIMIT 1")) {
                 setParameter(prepStatement, 1, keyValue);
+                try (ResultSet rs = prepStatement.executeQuery()) {
+                    return rs.next();
+                }
+            }
+        }
+        catch (Exception e) {
+            throwDBError(e);
+            return false;
+        }
+    }
+
+    /**
+     * Checks if the specified data exists in the database based on key-value pairs.
+     * @param pairs One or more column-value pairs to check
+     * @return true if the element exists, false otherwise
+     */
+    default boolean existsByValues(ColumnValue<E>... pairs) {
+        try {
+            if (pairs == null || pairs.length == 0) {
+                System.out.println("At least one column-value pair must be provided");
+            }
+            StringBuilder whereClause = new StringBuilder();
+            int paramCount = 0;
+            for (ColumnValue<E> pair : pairs) {
+                E keyColumn = pair.keyColumn();
+                Object keyValue = SQLInputFilter.filterExternalInput(pair.keyValue());
+
+                if (!keyColumn.getType().isInstance(keyValue)) {
+                    LogManager.getLogger().error("Invalid value type for {}: {}, expected: {}",
+                            keyColumn.name(), keyValue.getClass().getName(), keyColumn.getType().getName());
+                    return false;
+                }
+
+                if (paramCount > 0) {
+                    whereClause.append(" AND ");
+                }
+                whereClause.append(keyColumn.name()).append(" = ?");
+                paramCount++;
+            }
+            try (PreparedStatement prepStatement = SQL.getConnection().get()
+                    .prepareStatement("SELECT 1 FROM " + getInstance().tableName() + " WHERE " + whereClause + " LIMIT 1")) {
+                for (int i = 0; i < pairs.length; i++) {
+                    setParameter(prepStatement, i + 1, pairs[i].keyValue());
+                }
                 try (ResultSet rs = prepStatement.executeQuery()) {
                     return rs.next();
                 }
