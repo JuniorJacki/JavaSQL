@@ -1,14 +1,13 @@
 package de.juniorjacki.SQL.Interface;
 
-
-
 import de.juniorjacki.SQL.Query.SQLInputFilter;
 import de.juniorjacki.SQL.SQL;
 import de.juniorjacki.SQL.Structure.DatabaseProperty;
 import de.juniorjacki.SQL.Structure.DatabaseRecord;
 import de.juniorjacki.SQL.Structure.Table;
 
-import javax.swing.text.html.Option;
+import org.json.JSONObject;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -35,29 +34,30 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
         }
     }
 
+    /**
+     * Record representing a key-value pair for database query
+     */
     record ColumnValue<E>(E keyColumn, Object keyValue) {}
 
 
-
     private void throwDBError(Exception e){
-        System.out.println("Database Error: "+e);
+        System.out.println("Database Error: " + e);
     }
-
-    private void throwInputError(String wantedType,String passedType){
-        System.out.println("Invalid value type: "+wantedType+", expected:"+passedType);
+    
+    private void throwInputError(E keyColumn, Object keyValue) {
+        System.out.println("Invalid value type for {}: {}, expected: {}",
+                keyColumn.name(), keyValue.getClass().getName(), keyColumn.getType().getName());
     }
 
     /**
      * Gets the count of specified data from the database.
-     * @param keyColumn
-     * @param keyValue
      * @return The count of rows found
      */
     default int countByValue(E keyColumn, Object keyValue) {
         try {
             keyValue = SQLInputFilter.filterExternalInput(keyValue); // Filter SQL Injection
             if (!keyColumn.getType().isInstance(keyValue)) {
-                throwInputError(keyValue.getClass().getName(), keyColumn.getType().getName());
+                throwInputError(keyColumn, keyValue);
                 return 0;
             }
             try (PreparedStatement prepStatement = SQL.getConnection().get().prepareStatement("SELECT COUNT(*) FROM " + getInstance().tableName() + " WHERE " + keyColumn.name() + " = ?")) {
@@ -77,18 +77,15 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
         }
     }
 
-
     /**
      * Checks if the specified data exists in the database.
-     * @param keyColumn
-     * @param keyValue
      * @return true if the element exists, false otherwise
      */
-    default boolean existsByValue(E keyColumn, Object keyValue) {
+    default boolean existsByKey(E keyColumn, Object keyValue) {
         try {
             keyValue = SQLInputFilter.filterExternalInput(keyValue); // Filter SQL Injection
             if (!keyColumn.getType().isInstance(keyValue)) {
-                throwInputError(keyValue.getClass().getName(), keyColumn.getType().getName());
+                throwInputError(keyColumn, keyValue);
                 return false;
             }
 
@@ -110,10 +107,10 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
      * @param pairs One or more column-value pairs to check
      * @return true if the element exists, false otherwise
      */
-    default boolean existsByValues(ColumnValue<E>... pairs) {
+    default boolean existsByKeys(ColumnValue<E>... pairs) {
         try {
             if (pairs == null || pairs.length == 0) {
-                System.out.println("At least one column-value pair must be provided");
+                LogManager.getLogger().error("At least one column-value pair must be provided");
             }
             StringBuilder whereClause = new StringBuilder();
             int paramCount = 0;
@@ -122,8 +119,7 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
                 Object keyValue = SQLInputFilter.filterExternalInput(pair.keyValue());
 
                 if (!keyColumn.getType().isInstance(keyValue)) {
-                    LogManager.getLogger().error("Invalid value type for {}: {}, expected: {}",
-                            keyColumn.name(), keyValue.getClass().getName(), keyColumn.getType().getName());
+                    throwInputError(keyColumn, keyValue);
                     return false;
                 }
 
@@ -149,18 +145,111 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
         }
     }
 
+    /**
+     * Checks if the specified data exists in the database based on any key-value pairs.
+     * @param pairs One or more column-value pairs to check
+     * @return true if any of the pairs exists, false otherwise
+     */
+    default boolean existsByAnyKeys(ColumnValue<E>... pairs) {
+        try {
+            if (pairs == null || pairs.length == 0) {
+                LogManager.getLogger().error("At least one column-value pair must be provided");
+            }
+            StringBuilder whereClause = new StringBuilder();
+            int paramCount = 0;
+            for (ColumnValue<E> pair : pairs) {
+                E keyColumn = pair.keyColumn();
+                Object keyValue = SQLInputFilter.filterExternalInput(pair.keyValue());
+
+                if (!keyColumn.getType().isInstance(keyValue)) {
+                    throwInputError(keyColumn, keyValue);
+                    return false;
+                }
+
+                if (paramCount > 0) {
+                    whereClause.append(" OR ");
+                }
+                whereClause.append(keyColumn.name()).append(" = ?");
+                paramCount++;
+            }
+
+            try (PreparedStatement prepStatement = SQL.getConnection().get()
+                    .prepareStatement("SELECT 1 FROM " + getInstance().tableName() + " WHERE " + whereClause + " LIMIT 1")) {
+                for (int i = 0; i < pairs.length; i++) {
+                    setParameter(prepStatement, i + 1, pairs[i].keyValue());
+                }
+                try (ResultSet rs = prepStatement.executeQuery()) {
+                    return rs.next();
+                }
+            }
+        }
+        catch (Exception e) {
+            throwDBError(e);
+            return false;
+        }
+    }
+
+    /**
+     * Checks if the specified data exists in the database based on any key-value pairs.
+     * @param pairs One or more column-value pairs to check
+     * @return true if any of the pairs exists, false otherwise
+     */
+    default boolean existsByKeyAndAnyValues(ColumnValue<E> keyPair,ColumnValue<E>... pairs) {
+        try {
+            if (keyPair == null || pairs == null || pairs.length == 0) {
+                LogManager.getLogger().error("At least one column-value pair must be provided");
+            }
+            StringBuilder whereClause = new StringBuilder();
+            int paramCount = 0;
+
+            E keyColumn = keyPair.keyColumn();
+            Object keyValue = SQLInputFilter.filterExternalInput(keyPair.keyValue());
+            whereClause.append(keyColumn.name()).append(" = ?");
+            whereClause.append(" AND (");
+
+            for (ColumnValue<E> pair : pairs) {
+                E column = pair.keyColumn();
+                Object value = SQLInputFilter.filterExternalInput(pair.keyValue());
+
+                if (!column.getType().isInstance(value)) {
+                    throwInputError(column, value);
+                    return false;
+                }
+
+                if (paramCount > 0) {
+                    whereClause.append(" OR ");
+                }
+                whereClause.append(column.name()).append(" = ?");
+                paramCount++;
+            }
+            whereClause.append(" )");
+
+            try (PreparedStatement prepStatement = SQL.getConnection().get()
+                    .prepareStatement("SELECT 1 FROM " + getInstance().tableName() + " WHERE " + whereClause + " LIMIT 1")) {
+                setParameter(prepStatement, 1, keyValue);
+                for (int i = 0; i < pairs.length; i++) {
+                    setParameter(prepStatement, i + 2, pairs[i].keyValue());
+                }
+                try (ResultSet rs = prepStatement.executeQuery()) {
+                    return rs.next();
+                }
+            }
+        }
+        catch (Exception e) {
+            throwDBError(e);
+            return false;
+        }
+    }
 
     /**
      * Gets Specified Data from Database
-     * @param keyColumn
-     * @param keyValue
      * @return List of Table Record
      */
-    default Optional<List<R>> getByValue(E keyColumn, Object keyValue) {
+    default Optional<List<R>> getByKey(E keyColumn, Object keyValue) {
         try {
             keyValue = SQLInputFilter.filterExternalInput(keyValue); // Filter SQL Injection
             if (!keyColumn.getType().isInstance(keyValue)) {
-                throwInputError(keyValue.getClass().getName(), keyColumn.getType().getName());
+                throwInputError(keyColumn, keyValue);
                 return Optional.empty();
             }
             try (PreparedStatement prepStatement = SQL.getConnection().get().prepareStatement("SELECT * FROM " + getInstance().tableName() + " WHERE " + keyColumn.name() + " = ?")) {
@@ -168,7 +257,7 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
                 try (ResultSet rs = prepStatement.executeQuery()) {
                     List<R> objects = new ArrayList<>();
                     while (rs.next()) {
-                        objects.add((R) de.juniorjacki.utils.Record.populateRecord(getInstance(), rs));
+                        objects.add((R) Record.populateRecord(getInstance(), rs));
                     }
                     return Optional.of(objects);
                 }
@@ -182,22 +271,20 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
 
     /**
      * Gets Specified Data from Database
-     * @param keyColumn
-     * @param keyValue
      * @return First Table Record
      */
-    default Optional<R> getFirstByValue(E keyColumn, Object keyValue) {
+    default Optional<R> getFirstByKey(E keyColumn, Object keyValue) {
         try {
             keyValue = SQLInputFilter.filterExternalInput(keyValue); // Filter SQL Injection
             if (!keyColumn.getType().isInstance(keyValue)) {
-                throwInputError(keyValue.getClass().getName(), keyColumn.getType().getName());
+                throwInputError(keyColumn, keyValue);
                 return Optional.empty();
             }
             try (PreparedStatement prepStatement = SQL.getConnection().get().prepareStatement("SELECT * FROM " + getInstance().tableName() + " WHERE " + keyColumn.name() + " = ? LIMIT 1")) {
                 setParameter(prepStatement, 1, keyValue);
                 try (ResultSet rs = prepStatement.executeQuery()) {
                     if (rs.next()) {
-                        return Optional.of((R) de.juniorjacki.utils.Record.populateRecord(getInstance(), rs));
+                        return Optional.of((R) Record.populateRecord(getInstance(), rs));
                     }
                     return Optional.empty();
                 }
@@ -211,16 +298,13 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
 
     /**
      * Gets Specified Data from Database
-     * @param keyColumn
-     * @param keyValue
-     * @param returnColumn
      * @return Returns List of Column Type Objects as List
      */
-    default Optional<Object> getFirstColumnByValue(E keyColumn, Object keyValue, E returnColumn) {
+    default Optional<Object> getFirstColumnByKey(E keyColumn, Object keyValue, E returnColumn) {
         try {
             keyValue = SQLInputFilter.filterExternalInput(keyValue); // Filter SQL Injection
             if (!keyColumn.getType().isInstance(keyValue)) {
-                throwInputError(keyValue.getClass().getName(), keyColumn.getType().getName());
+                throwInputError(keyColumn, keyValue);
                 return Optional.empty();
             }
             try (PreparedStatement prepStatement = SQL.getConnection().get().prepareStatement(String.format("SELECT %s FROM %s WHERE %s = ? LIMIT 1", returnColumn.name(), getInstance().tableName(), keyColumn.name()))) {
@@ -240,18 +324,18 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
     }
 
     /**
-     * Gets the first or last value from in the database, based on the keyColumn.
-     * @param keyColumn The column to filter by
+     * Gets the first or last value from in the database, based on the orderColumn.
+     * @param orderColumn The column to filter by
      * @param order The order (ascending or descending)
      * @return Returns a single table record as an Object
      */
-    default Optional<R> getByOrder(E keyColumn, Order order) {
+    default Optional<R> getByOrder(E orderColumn, Order order) {
         try {
-            String query = String.format("SELECT * FROM %s ORDER BY %s %s LIMIT 1", getInstance().tableName(), keyColumn.name(), order.sql);
+            String query = String.format("SELECT * FROM %s ORDER BY %s %s LIMIT 1", getInstance().tableName(), orderColumn.name(), order.sql);
             try (PreparedStatement prepStatement = SQL.getConnection().get().prepareStatement(query)) {
                 try (ResultSet rs = prepStatement.executeQuery()) {
                     if (rs.next()) {
-                        return Optional.of((R) de.juniorjacki.utils.Record.populateRecord(getInstance(), rs));
+                        return Optional.of((R) Record.populateRecord(getInstance(), rs));
                     } else {
                         return Optional.empty();
                     }
@@ -263,6 +347,111 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
             return Optional.empty();
         }
     }
+
+    /**
+     * Gets the first or last value from in the database, based on the Key.
+     * @param keyColumn The column to filter by
+     * @param keyValue The value to filter by
+     * @param orderColumn Column to order
+     * @param order The order (ascending or descending)
+     * @return Returns a single table record as an Object
+     */
+    default Optional<R> getByOrderAndKey(E keyColumn,Object keyValue,E orderColumn, Order order) {
+        try {
+            keyValue = SQLInputFilter.filterExternalInput(keyValue); // Filter SQL Injection
+            if (!keyColumn.getType().isInstance(keyValue)) {
+                throwInputError(keyColumn, keyValue);
+                return Optional.empty();
+            }
+            String query = String.format("SELECT * FROM %s WHERE %s = ? ORDER BY %s %s LIMIT 1", getInstance().tableName(),keyColumn.name(), orderColumn.name(), order.sql);
+            try (PreparedStatement prepStatement = SQL.getConnection().get().prepareStatement(query)) {
+                setParameter(prepStatement, 1, keyValue);
+                try (ResultSet rs = prepStatement.executeQuery()) {
+                    if (rs.next()) {
+                        return Optional.of((R) Record.populateRecord(getInstance(), rs));
+                    } else {
+                        return Optional.empty();
+                    }
+                }
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            throwDBError(e);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Gets the first or last value from in the database, based on the Keys.
+     * @param orderColumn Column to order
+     * @param order The order (ascending or descending)
+     * @return Returns a single table record as an Object
+     */
+    default Optional<R> getByOrderAndKeys(E orderColumn, Order order,ColumnValue<E>... keyPairs) {
+        try {
+            if (keyPairs == null || keyPairs.length == 0) {
+                LogManager.getLogger().error("At least one column-value pair must be provided");
+            }
+            // Validate all parameters upfront
+            for (ColumnValue<E> pair : keyPairs) {
+                if (!pair.keyColumn().getType().isInstance(pair.keyValue())) {
+                    throwInputError(pair.keyColumn(), pair.keyValue());
+                    return Optional.empty();
+                }
+            }
+            // Use Stream to build WHERE clause efficiently
+            String whereClause = Arrays.stream(keyPairs)
+                    .map(pair -> pair.keyColumn().name() + " = ?")
+                    .collect(Collectors.joining(" AND "));
+
+            String query = "SELECT * FROM " + getInstance().tableName() +
+                    " WHERE " + whereClause +
+                    " ORDER BY " + orderColumn.name() + " " + order.sql +
+                    " LIMIT 1";
+            LogManager.getLogger().info(query);
+            return executeQuery(query, (ColumnValue<E>[]) keyPairs);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            throwDBError(e);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Gets value from in the database, based on the Keys specified.
+     * @return Returns a single table record as an Object
+     */
+    default Optional<R> getByKeys(ColumnValue<E>... keyPairs) {
+        try {
+            if (keyPairs == null || keyPairs.length == 0) {
+                LogManager.getLogger().error("At least one column-value pair must be provided");
+            }
+            // Validate all parameters upfront
+            for (ColumnValue<E> pair : keyPairs) {
+                if (!pair.keyColumn().getType().isInstance(pair.keyValue())) {
+                    throwInputError(pair.keyColumn(), pair.keyValue());
+                    return Optional.empty();
+                }
+            }
+            // Use Stream to build WHERE clause efficiently
+            String whereClause = Arrays.stream(keyPairs)
+                    .map(pair -> pair.keyColumn().name() + " = ?")
+                    .collect(Collectors.joining(" AND "));
+
+            String query = "SELECT * FROM " + getInstance().tableName() +
+                    " WHERE " + whereClause +
+                    " LIMIT 1";
+            return executeQuery(query, (ColumnValue<E>[]) keyPairs);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            throwDBError(e);
+            return Optional.empty();
+        }
+    }
+
 
 
     /**
@@ -276,7 +465,7 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
         try {
             keyValue = SQLInputFilter.filterExternalInput(keyValue); // Filter SQL Injection
             if (!keyColumn.getType().isInstance(keyValue)) {
-                throwInputError(keyValue.getClass().getName(), keyColumn.getType().getName());
+                throwInputError(keyColumn, keyValue);
                 return Optional.empty();
             }
             try (PreparedStatement prepStatement = SQL.getConnection().get().prepareStatement(String.format("SELECT %s FROM %s WHERE %s = ?", returnColumn.name(), getInstance().tableName(), keyColumn.name()))) {
@@ -325,12 +514,7 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
 
     /**
      * Updates specified Rows with specified Data
-     * @param keyColumn
-     * @param keyValue
-     * @param updateColumn
-     * @param updateValue
      * @return If Success returns True
-     * @throws Exception
      */
     default boolean update(E keyColumn, Object keyValue, E updateColumn, Object updateValue) {
         try {
@@ -354,7 +538,6 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
      * @param updateColumn The column to update
      * @param updateValue The value to update the column with
      * @return If success, returns true
-     * @throws Exception
      */
     default boolean updateByOrder(E keyColumn, Order order, E updateColumn, Object updateValue) {
         try {
@@ -425,6 +608,22 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
 
     }
 
+    @NotNull
+    private Optional<R> executeQuery(String query, ColumnValue<E>[] keyPairs) throws Exception {
+        try (PreparedStatement prepStatement = SQL.getConnection().get().prepareStatement(query)) {
+            for (int i = 0; i < keyPairs.length; i++) {
+                setParameter(prepStatement, i + 1, SQLInputFilter.filterExternalInput(keyPairs[i].keyValue()));
+            }
+            try (ResultSet rs = prepStatement.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of((R) Record.populateRecord(getInstance(), rs));
+                } else {
+                    return Optional.empty();
+                }
+            }
+        }
+    }
+
 
     private void setParameters(PreparedStatement prepStatement, R record, List<E> properties) throws SQLException, NoSuchFieldException, IllegalAccessException {
         for (int index = 0; index < properties.size(); index++) {
@@ -455,6 +654,7 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
             case UUID uuid -> prepStatement.setString(index, uuid.toString());
             case Integer i -> prepStatement.setInt(index, i);
             case long ll -> prepStatement.setLong(index, ll);
+            case JSONObject jObject -> prepStatement.setString(index, jObject.toString());
             case Double d -> prepStatement.setDouble(index, d);
             case Boolean b -> prepStatement.setBoolean(index, b);
             default -> prepStatement.setObject(index, value);
@@ -473,6 +673,8 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
             return rs.getInt(columnName);
         } else if (type == Long.class || type == long.class) {
             return rs.getLong(columnName);
+        } else if (type == JSONObject.class) {
+            return new JSONObject(rs.getString(columnName));
         } else if (type == Double.class) {
             return rs.getDouble(columnName);
         } else {
@@ -480,10 +682,3 @@ public interface DatabaseInterface<G extends Table<E, R>, R extends java.lang.Re
         }
     }
 }
-
-
-
-
-
-
-
