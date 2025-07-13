@@ -4,6 +4,7 @@ package de.juniorjacki.utils;
 
 import de.juniorjacki.SQL.Structure.DatabaseProperty;
 import de.juniorjacki.SQL.Structure.Table;
+import org.json.JSONObject;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -58,6 +59,8 @@ public class Record {
                             constructorArgs[i] = UUID.fromString(resultSet.getString(componentName));
                         } else if (property.getType().equals(Integer.class)) {
                             constructorArgs[i] = resultSet.getInt(componentName);
+                        } else if (property.getType().equals(JSONObject.class)) {
+                            constructorArgs[i] = new JSONObject(resultSet.getString(componentName));
                         } else if (property.getType().equals(Long.class)) {
                             constructorArgs[i] = resultSet.getLong(componentName);
                         } else if (property.getType().equals(Double.class)) {
