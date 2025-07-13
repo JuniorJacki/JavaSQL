@@ -46,6 +46,7 @@ public class SQLQueryBuilder {
         return switch (dataType.getSimpleName()) {
             case "UUID" -> "VARCHAR(36)";
             case "String" -> "VARCHAR(255)";
+            case "JSONObject" -> "JSON";
             case "Long", "long" -> "BIGINT";
             case "Integer" -> "INT";
             case "Boolean" -> "BOOLEAN";
