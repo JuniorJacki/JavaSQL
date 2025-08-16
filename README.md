@@ -1,5 +1,8 @@
 # JavaSQL - A Lightweight, Highly Customizable SQL Service
 
+## New Feature
+### Custom Query Builder for defined Tables
+
 ## Key Features
 
 - **Connection Management**
