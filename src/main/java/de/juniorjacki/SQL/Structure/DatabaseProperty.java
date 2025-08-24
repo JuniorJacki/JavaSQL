@@ -1,5 +1,7 @@
 package de.juniorjacki.SQL.Structure;
 
+import de.juniorjacki.SQL.Type.DatabaseType;
+
 public interface DatabaseProperty {
     /**
      * Defines If Column is a Primary Key
@@ -13,9 +15,14 @@ public interface DatabaseProperty {
     /**
      * Defines if Column Datatype
      */
-    Class<?> getType();
+    DatabaseType getType();
     /**
      * Defines if Column name
      */
     String name();
+
+    /**
+     * Defines extra Information for Column Datatype
+     */
+    int extendLength();
 }

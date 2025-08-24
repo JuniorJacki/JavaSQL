@@ -1,16 +1,18 @@
 package de.juniorjacki.SQL.Structure.DataTable;
 
 import de.juniorjacki.SQL.Interface.DatabaseInterface;
+import de.juniorjacki.SQL.Interface.QueryBuilder;
 import de.juniorjacki.SQL.Structure.DatabaseProperty;
-import de.juniorjacki.SQL.Structure.DatabaseRecord;
+import de.juniorjacki.SQL.Type.DatabaseRecord;
 import de.juniorjacki.SQL.Structure.Table;
+import de.juniorjacki.SQL.Type.DatabaseType;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class ExampleTable extends Table<ExampleTable.Property,ExampleTable.Example> implements DatabaseInterface<ExampleTable,ExampleTable.Example,ExampleTable.Property> {
+public class ExampleTable extends Table<ExampleTable.Property,ExampleTable.Example> implements DatabaseInterface<ExampleTable,ExampleTable.Example,ExampleTable.Property>, QueryBuilder<ExampleTable,ExampleTable.Example,ExampleTable.Property> {
     @Override
     public Class<ExampleTable.Example> getTableRecord() {
         return ExampleTable.Example.class;
@@ -26,7 +28,6 @@ public class ExampleTable extends Table<ExampleTable.Property,ExampleTable.Examp
         upsert(new ExampleTable.Example(UUID.randomUUID(),"Junior","Jacki","duck@juniorjacki.de",17));
     }
 
-
     @Override
     public ExampleTable getInstance() {
         return this;
@@ -41,24 +42,24 @@ public class ExampleTable extends Table<ExampleTable.Property,ExampleTable.Examp
 
     public enum Property implements DatabaseProperty {
 
-        uID(true, UUID.class), // Defines a Column named uID that is a Primary Key with the Datatype UUID -> VARCHAR(36)
-        preName(false,String.class), // Defines a Column named preName with the Datatype String -> VARCHAR(255)
-        lastName(false,String.class), // Defines a Column named lastName with the Datatype String -> VARCHAR(255)
-        email(false,true,String.class), // Defines a Column named email that needs to be Unique with the Datatype String -> VARCHAR(255)
-        age(false,Integer.class),; // Defines a Column named age with the Datatype Integer -> INT
+        uID(true, DatabaseType.UUID), // Defines a Column named uID that is a Primary Key with the Datatype UUID -> VARCHAR(36)
+        preName(false,DatabaseType.STRING), // Defines a Column named preName with the Datatype String -> VARCHAR(255)
+        lastName(false,DatabaseType.STRING), // Defines a Column named lastName with the Datatype String -> VARCHAR(255)
+        email(false,true,DatabaseType.STRING), // Defines a Column named email that needs to be Unique with the Datatype String -> VARCHAR(255)
+        age(false,DatabaseType.INTEGER),; // Defines a Column named age with the Datatype Integer -> INT
 
         private final boolean key;
         private final boolean unique;
-        private final Class<?> type;
+        private final DatabaseType type;
 
 
-        Property(boolean key, Class<?> type) {
+        Property(boolean key, DatabaseType type) {
             this.key = key;
             unique = false;
             this.type = type;
         }
 
-        Property(boolean key,boolean unique, Class<?> type) {
+        Property(boolean key,boolean unique, DatabaseType type) {
             this.key = key;
             this.unique = unique;
             this.type = type;
@@ -75,8 +76,13 @@ public class ExampleTable extends Table<ExampleTable.Property,ExampleTable.Examp
         }
 
         @Override
-        public Class<?> getType() {
+        public DatabaseType getType() {
             return type;
+        }
+
+        @Override
+        public int extendLength() {
+            return 0;
         }
     }
     public static ExampleTable Instance = new ExampleTable();

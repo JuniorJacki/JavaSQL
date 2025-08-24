@@ -2,7 +2,7 @@ package de.juniorjacki.SQL;
 
 
 import de.juniorjacki.SQL.Connection.SQLConnection;
-import de.juniorjacki.SQL.Query.SQLDatabase;
+import de.juniorjacki.SQL.Base.SQLDatabase;
 
 import java.sql.Connection;
 import java.sql.SQLException;
