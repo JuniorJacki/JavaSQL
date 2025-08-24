@@ -142,6 +142,8 @@ public class LicenseTable extends Table<LicenseTable.Property, LicenseTable.Lice
    - Create a static instance (e.g., `Instance`) for easy access.
 6. **Override Methods**:
    - Implement `getTableRecord`, `getProperties`, and `getInstance` to define the table's metadata.
+7. **Add Table to the Tables Enum**:
+   - To Automatically create and maintain the Table, you need to add an Instance to the `Table Enum`.
 
 ### Basic CRUD Operations
 
