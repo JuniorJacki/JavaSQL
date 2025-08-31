@@ -19,12 +19,12 @@ public class SQLConnection {
     };
 
     protected boolean testKey(dbKey dbKey) throws SQLException {
-        return DriverManager.getConnection("jdbc:mysql://" + dbKey.host + "/" + dbKey.dataBase, dbKey.username, dbKey.passwd).isValid(5000);
+        return DriverManager.getConnection("jdbc:mysql://" + dbKey.host+":"+ dbKey.port + "/" + dbKey.dataBase, dbKey.username, dbKey.passwd).isValid(5000);
     }
 
 
     protected Connection getNewConnection(dbKey dbKey) throws SQLException {
-        return DriverManager.getConnection("jdbc:mysql://" + dbKey.host + "/" + dbKey.dataBase, dbKey.username, dbKey.passwd);
+        return DriverManager.getConnection("jdbc:mysql://" + dbKey.host+":"+ dbKey.port + "/" + dbKey.dataBase, dbKey.username, dbKey.passwd);
     }
 
     protected void closeConnection(Connection con) throws SQLException {
@@ -72,6 +72,7 @@ public class SQLConnection {
         System.out.println("Reconnect connection attempts stopped.");
     }
 }
+
 
 
 
