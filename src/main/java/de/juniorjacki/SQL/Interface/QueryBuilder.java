@@ -752,7 +752,7 @@ public interface QueryBuilder<G extends Table<E, R>, R extends java.lang.Record 
     }
 
 
-    class ConditionQueryBuilder<E extends Enum<E> & DatabaseProperty> {
+     class ConditionQueryBuilder<E extends Enum<E> & DatabaseProperty> implements Cloneable {
         Condition<E> initalCondition;
         Queue<Map.Entry<Condition<E>,ConditionType>> conditions = new LinkedList<>();
 
@@ -761,13 +761,15 @@ public interface QueryBuilder<G extends Table<E, R>, R extends java.lang.Record 
         }
 
         public ConditionQueryBuilder<E> AND(Condition<E> additionalCondition) {
-            conditions.add(new AbstractMap.SimpleEntry<Condition<E>,ConditionType>(additionalCondition, ConditionType.AND));
-            return this;
+            ConditionQueryBuilder<E> updated = clone();
+            updated.conditions.add(new AbstractMap.SimpleEntry<Condition<E>,ConditionType>(additionalCondition, ConditionType.AND));
+            return updated;
         }
 
         public ConditionQueryBuilder<E> OR(Condition<E> additionalCondition) {
-            conditions.add(new AbstractMap.SimpleEntry<Condition<E>,ConditionType>(additionalCondition, ConditionType.OR));
-            return this;
+            ConditionQueryBuilder<E> updated = clone();
+            updated.conditions.add(new AbstractMap.SimpleEntry<Condition<E>,ConditionType>(additionalCondition, ConditionType.OR));
+            return updated;
         }
 
         protected StringBuilder build() {
@@ -810,6 +812,15 @@ public interface QueryBuilder<G extends Table<E, R>, R extends java.lang.Record 
                 currentQuery.append(conditionQuery);
             }
             return currentQuery;
+        }
+
+        @Override
+        protected ConditionQueryBuilder<E> clone() {
+            try {
+                return (ConditionQueryBuilder<E>) super.clone();
+            } catch (CloneNotSupportedException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         enum ConditionType {
