@@ -89,9 +89,6 @@ public interface QueryBuilder<G extends Table<E, R>, R extends java.lang.Record 
          */
         @SuppressWarnings("unchecked")
         public T limitBy(int limit) {
-            if (limit < 0) {
-                throw new IllegalArgumentException("Limit cannot be negative");
-            }
             this.limit = limit;
             return (T) this;
         }
@@ -149,7 +146,7 @@ public interface QueryBuilder<G extends Table<E, R>, R extends java.lang.Record 
             if (orderBy != null) {
                 query.append(" ORDER BY ").append(orderBy.name()).append(" ").append(order.sql);
             }
-            if (limit != -1) {
+            if (limit < 0) {
                 query.append(" LIMIT ").append(limit);
             }
             return query;
