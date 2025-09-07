@@ -236,7 +236,7 @@ public interface QueryBuilder<G extends Table<E, R>, R extends java.lang.Record 
                 while (rs.next()) {
                     rows.add((R) Record.populateRecord(table, rs));
                 }
-                return Optional.of(rows);
+                return Optional.ofNullable(rows.isEmpty() ? null : rows);
             } catch (Exception e) {
                 throwDBError(e);
                 return Optional.empty();
@@ -387,7 +387,7 @@ public interface QueryBuilder<G extends Table<E, R>, R extends java.lang.Record 
                     }
                     result.put(refRow, bindingRow);
                 }
-                return Optional.of(result);
+                return Optional.ofNullable(result.isEmpty() ? null : result);
             } catch (Exception e) {
                 throwDBError(e);
                 return Optional.empty();
@@ -522,7 +522,7 @@ public interface QueryBuilder<G extends Table<E, R>, R extends java.lang.Record 
                 while (rs.next()) {
                     rows.put((R)Record.populateRecord(refTable, rs,true),(A)Record.populateRecord(this.table, rs,true));
                 }
-                return Optional.of(rows);
+                return Optional.ofNullable(rows.isEmpty() ? null : rows);
             } catch (Exception e) {
                 throwDBError(e);
                 return Optional.empty();
@@ -607,7 +607,7 @@ public interface QueryBuilder<G extends Table<E, R>, R extends java.lang.Record 
                 while (rs.next()) {
                     results.add(DatabaseInterface.getTypedValue(rs, returnColumn));
                 }
-                return Optional.of(results);
+                return Optional.ofNullable(results.isEmpty() ? null : results);
             } catch (Exception e) {
                 throwDBError(e);
                 return Optional.empty();
@@ -723,7 +723,7 @@ public interface QueryBuilder<G extends Table<E, R>, R extends java.lang.Record 
                     }
                     results.add(row);
                 }
-                return Optional.of(results);
+                return Optional.ofNullable(results.isEmpty() ? null : results);
             } catch (Exception e) {
                 throwDBError(e);
                 return Optional.empty();
